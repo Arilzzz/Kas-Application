@@ -19,6 +19,8 @@ Route::middleware(['auth:sanctum', 'role:admin,student'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
+Route::get('/studentsss', [DataStudentController::class, 'index']);
+
 // Routes accessible only by Admin
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/student/import', [DataStudentController::class, 'importCSV']);
