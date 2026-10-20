@@ -64,7 +64,7 @@ const deleteStudent = (id) => {
                 </div>
                 <div class="ml-4">
                   <div class="text-sm font-bold text-gray-900">{{ student.name }}</div>
-                  <div class="text-xs font-medium text-gray-500 mt-0.5">NISN: {{ student.nisn }}</div>
+                  <div class="text-xs font-medium text-gray-500 mt-0.5">NIS: {{ student.nisn }}</div>
                 </div>
               </div>
             </td>

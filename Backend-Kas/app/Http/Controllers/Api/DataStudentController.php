@@ -189,7 +189,7 @@ class DataStudentController extends Controller
 
                 $rows[] = [
                     'nis' => $nis,
-                    'nama_siswa' => $nama_siswa,
+                    'nama' => $nama_siswa,
                 ];
             }
 
