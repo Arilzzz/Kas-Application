@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AdminLayout from '../../components/AdminLayout.vue'
 import api from '../../services/api'
+import useDataStore from '../../services/dataCache'
+
+const dataStore = useDataStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -27,16 +30,12 @@ const itemsPerPage = 8
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 const fetchData = async () => {
-  loading.value = true
+  loading.value = !dataStore.state.isLoaded
   try {
-    const [studentsRes, paymentsRes, expensesRes] = await Promise.all([
-      api.get('/student'),
-      api.get('/pembayaran').catch(() => ({ data: { Data: [] } })),
-      api.get('/pengeluaran').catch(() => ({ data: { Data: [] } }))
-    ])
-    students.value = studentsRes.data.Data || studentsRes.data || []
-    payments.value = paymentsRes.data.Data || paymentsRes.data || []
-    expenses.value = expensesRes.data.Data || expensesRes.data || []
+    await dataStore.fetchAll()
+    students.value = dataStore.state.students
+    payments.value = dataStore.state.payments
+    expenses.value = dataStore.state.expenses
     if (route.query.id) loadPayment(route.query.id)
   } catch (error) {
     console.error('Error fetching data:', error)
@@ -150,8 +149,8 @@ const submitPayment = async () => {
       jumlah_pemasukkan: Math.round(Number(formAmount.value)),
       tanggal_pemasukkan: formDate.value
     })
-    const res = await api.get('/pembayaran')
-    payments.value = res.data.Data || res.data || []
+    await dataStore.invalidate()
+    payments.value = dataStore.state.payments
     cancelEdit()
     showSuccess.value = true
     setTimeout(() => { showSuccess.value = false }, 3000)
@@ -167,8 +166,8 @@ const deletePayment = async (id) => {
   if (!confirm('Hapus pembayaran ini?')) return
   try {
     await api.delete(`/pembayaran/${id}`)
-    const res = await api.get('/pembayaran')
-    payments.value = res.data.Data || res.data || []
+    await dataStore.invalidate()
+    payments.value = dataStore.state.payments
     if (paymentId.value === id) cancelEdit()
   } catch (error) {
     console.error('Failed to delete:', error)

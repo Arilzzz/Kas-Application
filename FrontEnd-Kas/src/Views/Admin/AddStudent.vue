@@ -3,6 +3,9 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '../../components/AdminLayout.vue'
 import api from '../../services/api'
+import useDataStore from '../../services/dataCache'
+
+const dataStore = useDataStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -28,8 +31,8 @@ const goBack = () => {
 
 const fetchStudents = async () => {
   try {
-    const res = await api.get('/student')
-    students.value = res.data.Data || res.data || []
+    await dataStore.fetchAll()
+    students.value = dataStore.state.students
     if (route.query.editId) {
       mode.value = 'update'
       selectedStudentId.value = Number(route.query.editId)
@@ -91,7 +94,8 @@ const submitForm = async () => {
     }
     
     submitSuccess.value = true
-    await fetchStudents()
+    await dataStore.invalidate()
+    students.value = dataStore.state.students
 
     setTimeout(() => {
       submitSuccess.value = false
@@ -157,7 +161,8 @@ const executeImport = async () => {
       time: 'Baru saja diimport'
     })
 
-    await fetchStudents()
+    await dataStore.invalidate()
+    students.value = dataStore.state.students
   } catch (error) {
     const errMsg = error.response?.data?.Message || error.response?.data?.errors?.file?.[0] || 'Gagal mengimport file CSV'
     importResult.value = {

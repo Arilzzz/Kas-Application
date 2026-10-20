@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '../../components/AdminLayout.vue'
 import api, { storageBaseUrl } from '../../services/api'
+import useDataStore from '../../services/dataCache'
+
+const dataStore = useDataStore()
 
 const loading = ref(true)
 const isSubmitting = ref(false)
@@ -15,6 +18,17 @@ const fileError = ref('')
 const expenditures = ref([])
 const payments = ref([])
 
+// Modal Preview Bukti
+const previewModalUrl = ref(null)
+const openModalPreview = (url) => { previewModalUrl.value = url }
+const closeModalPreview = () => { previewModalUrl.value = null }
+
+const getProofUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('data:') || path.startsWith('http')) return path
+  return `${storageBaseUrl}${path}`
+}
+
 const router = useRouter()
 
 const saldoAktif = computed(() => {
@@ -24,14 +38,12 @@ const saldoAktif = computed(() => {
 })
 
 const fetchExpenditures = async () => {
-  loading.value = true
+  // Hanya tampilkan loading spinner jika cache belum ada data
+  loading.value = !dataStore.state.isLoaded
   try {
-    const [expRes, payRes] = await Promise.all([
-      api.get('/pengeluaran').catch(() => ({ data: { Data: [] } })),
-      api.get('/pembayaran').catch(() => ({ data: { Data: [] } }))
-    ])
-    expenditures.value = expRes.data.Data || expRes.data || []
-    payments.value = payRes.data.Data || payRes.data || []
+    await dataStore.fetchAll()
+    expenditures.value = dataStore.state.expenses
+    payments.value = dataStore.state.payments
   } catch (error) {
     console.error('Error fetching expenditures:', error)
   } finally {
@@ -71,7 +83,10 @@ const submitExpenditure = async () => {
     description.value = ''
     amount.value = ''
     selectedFile.value = null
-    await fetchExpenditures()
+    previewImage.value = null
+    await dataStore.invalidate()
+    expenditures.value = dataStore.state.expenses
+    payments.value = dataStore.state.payments
   } catch (error) {
     console.error('Failed to submit:', error)
     if (error.response) alert('Error: ' + (error.response.data.message || JSON.stringify(error.response.data)))
@@ -86,7 +101,9 @@ const deleteExpenditure = async (id) => {
   if (!confirm('Hapus data pengeluaran ini?')) return
   try {
     await api.delete(`/pengeluaran/${id}`)
-    await fetchExpenditures()
+    await dataStore.invalidate()
+    expenditures.value = dataStore.state.expenses
+    payments.value = dataStore.state.payments
   } catch (error) {
     console.error('Failed to delete:', error)
     alert('Gagal menghapus pengeluaran.')
@@ -252,7 +269,7 @@ const recentProofs = computed(() =>
         <div class="bg-white border border-gray-100 rounded-3xl p-6">
           <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">BUKTI TERAKHIR</h3>
           <div class="flex gap-3">
-            <div v-for="proof in recentProofs" :key="proof.id" class="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden border border-gray-100 shadow-sm">
+            <div v-for="proof in recentProofs" :key="proof.id" @click="openModalPreview(proof.url)" class="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden border border-gray-100 shadow-sm cursor-pointer hover:opacity-80 transition-opacity" title="Klik untuk memperbesar">
               <img :src="proof.url" class="w-full h-full object-cover" />
             </div>
             <div v-if="expenditures.length > 3" class="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
@@ -304,9 +321,17 @@ const recentProofs = computed(() =>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <a v-if="exp.bukti_foto" :href="exp.bukti_foto.startsWith('data:') || exp.bukti_foto.startsWith('http') ? exp.bukti_foto : `${storageBaseUrl}${exp.bukti_foto}`" target="_blank" class="inline-flex w-10 h-10 bg-gray-100 rounded-lg items-center justify-center hover:bg-blue-100 text-gray-500 hover:text-blue-600 transition-colors">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </a>
+                <button
+                  v-if="exp.bukti_foto"
+                  type="button"
+                  @click="openModalPreview(getProofUrl(exp.bukti_foto))"
+                  class="inline-flex w-10 h-10 bg-gray-100 rounded-lg items-center justify-center hover:bg-blue-100 text-gray-500 hover:text-blue-600 transition-colors"
+                  title="Lihat Bukti Foto (Popup)"
+                >
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                </button>
                 <span v-else class="text-xs text-gray-400 font-medium">Tidak ada</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-black text-red-600">
@@ -329,4 +354,37 @@ const recentProofs = computed(() =>
     </div>
 
   </AdminLayout>
+
+  <!-- Modal Pop-up Preview Bukti Foto -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="previewModalUrl" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="closeModalPreview"></div>
+        <div class="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden max-w-2xl w-full">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-bold text-gray-900">Bukti Pengeluaran</h3>
+            <button @click="closeModalPreview" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="p-4 flex items-center justify-center bg-gray-50 min-h-[260px]">
+            <img :src="previewModalUrl" alt="Bukti pengeluaran" class="max-h-[65vh] max-w-full object-contain rounded-xl" />
+          </div>
+          <div class="px-6 py-3 flex justify-end border-t border-gray-100">
+            <a :href="previewModalUrl" target="_blank" class="flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              Buka ukuran penuh di tab baru
+            </a>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
+<style scoped>
+.modal-fade-enter-active { transition: all 0.2s ease-out; }
+.modal-fade-leave-active { transition: all 0.15s ease-in; }
+.modal-fade-enter-from   { opacity: 0; transform: scale(0.97); }
+.modal-fade-leave-to     { opacity: 0; transform: scale(0.97); }
+</style>

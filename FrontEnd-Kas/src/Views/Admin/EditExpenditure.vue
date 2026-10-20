@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AdminLayout from '../../components/AdminLayout.vue'
 import api, { storageBaseUrl } from '../../services/api'
+import useDataStore from '../../services/dataCache'
+
+const dataStore = useDataStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -72,6 +75,7 @@ const submitExpenditure = async () => {
     formData.append('keterangan', description.value)
     if (selectedFile.value) formData.append('bukti_foto', selectedFile.value)
     await api.post(`/pengeluaran/${expenditureId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    await dataStore.invalidate()
     router.push('/admin/expenditure')
   } catch (error) {
     console.error('Failed to update:', error)

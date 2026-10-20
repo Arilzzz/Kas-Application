@@ -5,12 +5,14 @@ import StudentKPIs from "../../components/DataStudent/StudentKPIs.vue";
 import StudentRegistryTable from "../../components/DataStudent/StudentRegistryTable.vue";
 import api from "../../services/api";
 import { useRouter } from "vue-router";
+import useDataStore from "../../services/dataCache";
 
+const dataStore = useDataStore();
 const router = useRouter();
 const students = ref([]);
 const payments = ref([]);
 const expenses = ref([]);
-const loading = ref(true);
+const loading = ref(!dataStore.state.isLoaded);
 const searchQuery = ref("")
 
 const WEEKLY_DUES = 2000
@@ -121,7 +123,10 @@ const executeImport = async () => {
     };
 
     // Refresh table data
-    await fetchData();
+    await dataStore.invalidate();
+    students.value = dataStore.state.students;
+    payments.value = dataStore.state.payments;
+    expenses.value = dataStore.state.expenses;
   } catch (error) {
     const errMsg =
       error.response?.data?.Message ||
@@ -298,33 +303,14 @@ const outstanding = computed(() => {
 });
 
 const fetchData = async () => {
-  loading.value = true;
+  loading.value = !dataStore.state.isLoaded;
   try {
-    const [studentsRes, paymentsRes, expensesRes] = await Promise.all([
-      api.get("/student"),
-      api.get("/pembayaran").catch(() => ({ data: { Data: [] } })),
-      api.get("/pengeluaran").catch(() => ({ data: { Data: [] } })),
-    ]);
-
-    students.value = studentsRes.data.Data || studentsRes.data || [];
-    payments.value = paymentsRes.data.Data || paymentsRes.data || [];
-    expenses.value = expensesRes.data.Data || expensesRes.data || [];
+    await dataStore.fetchAll();
+    students.value = dataStore.state.students;
+    payments.value = dataStore.state.payments;
+    expenses.value = dataStore.state.expenses;
   } catch (error) {
     console.error("Error fetching data:", error);
-    if (students.value.length === 0) {
-      students.value = [
-        { id: 1, nama_siswa: "Jane Smith", nis: "202100142" },
-        { id: 2, nama_siswa: "Ahmad Maulana", nis: "202100145" },
-      ];
-      payments.value = [
-        {
-          id: 1,
-          data_student_id: 1,
-          tanggal_pemasukkan: new Date().toISOString(),
-          jumlah_pemasukkan: 8000,
-        },
-      ];
-    }
   } finally {
     loading.value = false;
   }
@@ -348,7 +334,10 @@ const handleEdit = (id) => {
 const handleDelete = async (id) => {
   try {
     await api.delete(`/student/${id}`);
-    await fetchData();
+    await dataStore.invalidate();
+    students.value = dataStore.state.students;
+    payments.value = dataStore.state.payments;
+    expenses.value = dataStore.state.expenses;
   } catch (error) {
     console.error("Failed to delete student:", error);
     alert("Gagal menghapus siswa.");

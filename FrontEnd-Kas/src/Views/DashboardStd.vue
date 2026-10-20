@@ -7,13 +7,16 @@ import FinancialChart from '../components/Dashboard/FinancialChart.vue'
 import RecentLedger from '../components/Dashboard/RecentLedger.vue'
 import SiswaMenunggak from '../components/Dashboard/SiswaMenunggak.vue'
 import api from '../services/api'
+import useDataStore from '../services/dataCache'
+
+const dataStore = useDataStore()
 
 // ─── State reaktif utama ─────────────────────────────────────────────────────
 // ref() membungkus nilai menjadi reaktif; akses/ubah via .value di dalam script
 const students = ref([])
 const payments = ref([])
 const expenses = ref([])
-const loading  = ref(true)
+const loading  = ref(!dataStore.state.isLoaded)
 
 const WEEKLY_DUES = 2000  // iuran per minggu
 
@@ -230,19 +233,14 @@ const myOutstanding = computed(() => {
   return formatRupiah(Math.max(0, weekOrd - covered) * WEEKLY_DUES)
 })
 
-// ─── Fetch data dari API menggunakan Promise.all (parallel request) ───────────
-// Promise.all: semua request dijalankan bersamaan, tunggu semuanya selesai
+// ─── Fetch data dari dataStore cache ──────────────────────────────────────────
 const fetchData = async () => {
-  loading.value = true
+  loading.value = !dataStore.state.isLoaded
   try {
-    const [sRes, pRes, eRes] = await Promise.all([
-      api.get('/student').catch(()   => ({ data: { Data: [] } })),
-      api.get('/pembayaran').catch(() => ({ data: { Data: [] } })),
-      api.get('/pengeluaran').catch(() => ({ data: { Data: [] } })),
-    ])
-    students.value = sRes.data.Data || sRes.data || []
-    payments.value = pRes.data.Data || pRes.data || []
-    expenses.value = eRes.data.Data || eRes.data || []
+    await dataStore.fetchAll()
+    students.value = dataStore.state.students
+    payments.value = dataStore.state.payments
+    expenses.value = dataStore.state.expenses
   } catch (e) {
     console.error('Gagal memuat data:', e)
   } finally {

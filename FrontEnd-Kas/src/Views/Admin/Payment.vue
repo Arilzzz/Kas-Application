@@ -4,12 +4,15 @@ import { useRouter } from 'vue-router'
 import AdminLayout from '../../components/AdminLayout.vue'
 import StudentPaymentProfile from '../../components/Payment/StudentPaymentProfile.vue'
 import api from '../../services/api'
+import useDataStore from '../../services/dataCache'
+
+const dataStore = useDataStore()
 
 const router = useRouter()
 const students = ref([])
 const payments = ref([])
 const expenses = ref([])
-const loading = ref(true)
+const loading = ref(!dataStore.state.isLoaded)
 const isSubmitting = ref(false)
 
 // Form State
@@ -41,16 +44,12 @@ watch(useTodayDate, (isToday) => {
 
 // Fetch Data
 const fetchData = async () => {
-  loading.value = true
+  loading.value = !dataStore.state.isLoaded
   try {
-    const [studentsRes, paymentsRes, expensesRes] = await Promise.all([
-      api.get('/student'),
-      api.get('/pembayaran').catch(() => ({ data: { Data: [] } })),
-      api.get('/pengeluaran').catch(() => ({ data: { Data: [] } }))
-    ])
-    students.value = studentsRes.data.Data || studentsRes.data || []
-    payments.value = paymentsRes.data.Data || paymentsRes.data || []
-    expenses.value = expensesRes.data.Data || expensesRes.data || []
+    await dataStore.fetchAll()
+    students.value = dataStore.state.students
+    payments.value = dataStore.state.payments
+    expenses.value = dataStore.state.expenses
   } catch (error) {
     console.error('Error fetching data:', error)
   } finally {
@@ -131,8 +130,8 @@ const savePayment = async () => {
       jumlah_pemasukkan: Math.round(Number(amount.value)),
       tanggal_pemasukkan: dateToSave
     })
-    const paymentsRes = await api.get('/pembayaran')
-    payments.value = paymentsRes.data.Data || paymentsRes.data || []
+    await dataStore.invalidate()
+    payments.value = dataStore.state.payments
     amount.value = ''
     showSuccess.value = true
     setTimeout(() => { showSuccess.value = false }, 3000)
@@ -150,8 +149,8 @@ const deletePayment = async (id) => {
   if (!confirm('Hapus pembayaran ini?')) return
   try {
     await api.delete(`/pembayaran/${id}`)
-    const paymentsRes = await api.get('/pembayaran')
-    payments.value = paymentsRes.data.Data || paymentsRes.data || []
+    await dataStore.invalidate()
+    payments.value = dataStore.state.payments
   } catch (error) {
     console.error('Failed to delete payment:', error)
     alert('Gagal menghapus pembayaran.')
