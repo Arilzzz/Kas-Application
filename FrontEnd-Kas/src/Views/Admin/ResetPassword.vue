@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import api from '../../services/api'
+import api, { getCsrfCookie } from '../../services/api'
 
 const password = ref('')
 const password_confirmation = ref('')
@@ -26,7 +26,7 @@ async function resetPassword() {
 
   loading.value = true
   try {
-    await api.get('http://127.0.0.1:8000/sanctum/csrf-cookie')
+    await getCsrfCookie()
     const res = await api.post('/reset-password', {
       token: route.params.token,
       email: route.query.email,

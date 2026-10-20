@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AdminLayout from '../../components/AdminLayout.vue'
-import api from '../../services/api'
+import api, { storageBaseUrl } from '../../services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -32,7 +32,7 @@ const fetchExpenditure = async () => {
       amount.value = exp.jumlah_pengeluaran || ''
       transactionDate.value = exp.tanggal_pengeluaran ? exp.tanggal_pengeluaran.split('T')[0] : ''
       if (exp.bukti_foto) {
-        previewImage.value = `http://127.0.0.1:8000/storage/${exp.bukti_foto}`
+        previewImage.value = `${storageBaseUrl}${exp.bukti_foto}`
       }
     }
   } catch (error) {

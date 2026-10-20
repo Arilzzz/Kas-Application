@@ -12,8 +12,10 @@ defineProps({
 
 const emit = defineEmits(['toggle', 'update:filterMonth', 'update:filterWeek'])
 
-const BASE_URL   = 'http://127.0.0.1:8000/storage/'
 import { ref } from 'vue'
+import { storageBaseUrl } from '../../services/api'
+
+const BASE_URL   = storageBaseUrl
 const previewUrl = ref(null)
 const openPreview  = (url) => { previewUrl.value = url }
 const closePreview = ()    => { previewUrl.value = null }

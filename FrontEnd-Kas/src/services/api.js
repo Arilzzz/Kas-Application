@@ -19,4 +19,8 @@ api.interceptors.request.use(config => {
     return Promise.reject(error)
 })
 
-export default api
+export const backendBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/api\/?$/, '')
+export const storageBaseUrl = `${backendBaseUrl}/storage/`
+export const getCsrfCookie = () => axios.get(`${backendBaseUrl}/sanctum/csrf-cookie`, { withCredentials: true })
+
+export default api

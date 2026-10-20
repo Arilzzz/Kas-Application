@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import api from '../../services/api'
+import api, { getCsrfCookie } from '../../services/api'
 
 const email = ref('')
 const statusMsg = ref('')
@@ -17,7 +17,7 @@ async function requestReset() {
 
   loading.value = true
   try {
-    await api.get('http://127.0.0.1:8000/sanctum/csrf-cookie')
+    await getCsrfCookie()
     const res = await api.post('/forgot-password', { email: email.value })
     statusMsg.value = res.data.status || 'Link reset password telah dikirim ke email Anda!'
   } catch (err) {
