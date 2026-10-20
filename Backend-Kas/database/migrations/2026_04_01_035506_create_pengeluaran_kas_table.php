@@ -16,7 +16,7 @@ return new class extends Migration
             $table->date('tanggal_pengeluaran');
             $table->integer('jumlah_pengeluaran');
             $table->text('keterangan')->nullable();
-            $table->string('bukti_foto')->nullable(); // Path
+            $table->text('bukti_foto')->nullable(); // Path or Base64 data URL
             $table->timestamps();
         });
     }

@@ -59,8 +59,15 @@ class PengeluaranKasController extends Controller
 
         if ($request->hasFile('bukti_foto')) {
             $file = $request->file('bukti_foto');
-            $filename = time() . '_' . $file->getClientOriginalName(); // Adding timestamp to prevent override while keeping original name
-            $path = $file->storeAs('bukti', $filename, 'public');
+            // Check if running on Vercel serverless (read-only filesystem)
+            if (isset($_SERVER['VERCEL']) || env('VERCEL') || !is_writable(storage_path('app/public'))) {
+                $mime = $file->getMimeType() ?: 'image/jpeg';
+                $contents = file_get_contents($file->getRealPath());
+                $path = 'data:' . $mime . ';base64,' . base64_encode($contents);
+            } else {
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('bukti', $filename, 'public');
+            }
         }
 
         $pengeluaran = PengeluaranKas::create([
@@ -126,10 +133,16 @@ class PengeluaranKasController extends Controller
 
         if ($request->hasFile('bukti_foto')) {
             $file = $request->file('bukti_foto');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('bukti', $filename, 'public');
+            if (isset($_SERVER['VERCEL']) || env('VERCEL') || !is_writable(storage_path('app/public'))) {
+                $mime = $file->getMimeType() ?: 'image/jpeg';
+                $contents = file_get_contents($file->getRealPath());
+                $path = 'data:' . $mime . ';base64,' . base64_encode($contents);
+            } else {
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('bukti', $filename, 'public');
+            }
             $data['bukti_foto'] = $path;
- }       
+        }       
 
         $pengeluaran->update($data);
 

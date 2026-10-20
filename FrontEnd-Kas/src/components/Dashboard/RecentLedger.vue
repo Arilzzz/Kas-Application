@@ -153,7 +153,7 @@ const closePreview = ()    => { previewUrl.value = null }
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
             <button v-if="item.type === 'expense' && item.bukti_foto"
-              @click="openPreview(BASE_URL + item.bukti_foto)"
+              @click="openPreview(item.bukti_foto.startsWith('data:') || item.bukti_foto.startsWith('http') ? item.bukti_foto : BASE_URL + item.bukti_foto)"
               class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-600 flex items-center justify-center transition-colors"
               title="Lihat bukti foto">
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

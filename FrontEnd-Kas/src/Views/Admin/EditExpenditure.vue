@@ -32,7 +32,7 @@ const fetchExpenditure = async () => {
       amount.value = exp.jumlah_pengeluaran || ''
       transactionDate.value = exp.tanggal_pengeluaran ? exp.tanggal_pengeluaran.split('T')[0] : ''
       if (exp.bukti_foto) {
-        previewImage.value = `${storageBaseUrl}${exp.bukti_foto}`
+        previewImage.value = exp.bukti_foto.startsWith('data:') || exp.bukti_foto.startsWith('http') ? exp.bukti_foto : `${storageBaseUrl}${exp.bukti_foto}`
       }
     }
   } catch (error) {

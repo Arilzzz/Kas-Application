@@ -11,11 +11,11 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// Routes accessible by both Admin and Student
+// Routes accessible by both Admin and Student (read-only for students)
 Route::middleware(['auth:sanctum', 'role:admin,student'])->group(function () {
-    Route::apiResource('/pembayaran', PembayaranKasController::class);
-    Route::apiResource('/pengeluaran', PengeluaranKasController::class);
-    Route::apiResource('/student', DataStudentController::class);
+    Route::apiResource('/pembayaran', PembayaranKasController::class)->only(['index', 'show']);
+    Route::apiResource('/pengeluaran', PengeluaranKasController::class)->only(['index', 'show']);
+    Route::apiResource('/student', DataStudentController::class)->only(['index', 'show']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
