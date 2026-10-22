@@ -10,16 +10,17 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+Route::apiResource('/student', DataStudentController::class);
 
-// Routes accessible by both Admin and Student (read-only for students)
+// Routes accessible by both Admin and Student
 Route::middleware(['auth:sanctum', 'role:admin,student'])->group(function () {
-    Route::apiResource('/pembayaran', PembayaranKasController::class)->only(['index', 'show']);
-    Route::apiResource('/pengeluaran', PengeluaranKasController::class)->only(['index', 'show']);
-    Route::apiResource('/student', DataStudentController::class)->only(['index', 'show']);
+    Route::apiResource('/pembayaran', PembayaranKasController::class);
+    Route::apiResource('/pengeluaran', PengeluaranKasController::class);
+    Route::apiResource('/student', DataStudentController::class);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-Route::get('/studentsss', [DataStudentController::class, 'index']);
+// Route::get('/studentsss', [DataStudentController::class, 'index']);
 
 // Routes accessible only by Admin
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
@@ -30,7 +31,6 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-// Route::apiResource('/student', DataStudentController::class);
 // Route::apiResource('/pembayaran', PembayaranKasController::class);
 // Route::apiResource('/pengeluaran', PengeluaranKasController::class);
 
